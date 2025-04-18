@@ -26,7 +26,7 @@ const privateKeys = fs.readFileSync(path.join(__dirname, "privatekey.txt"), "utf
   .map(k => k.trim())
   .filter(k => k.length > 0);
 
-async function waitForSwapSuccess(txHash, tries = 10) {
+async function waitForSuccess(txHash, tries = 10) {
   const explorerUrl = `https://chainscan-newton.0g.ai/v1/transaction/${txHash}`;
   for (let i = 0; i < tries; i++) {
     try {
@@ -40,7 +40,7 @@ async function waitForSwapSuccess(txHash, tries = 10) {
     }
     await delay(3000);
   }
-  console.log("❌ Swap not confirmed after retries.");
+  console.log("❌ Transaksi Gagal atau Atau Masih Pending");
 }
 
 async function mintToken(wallet) {
@@ -53,19 +53,19 @@ async function mintToken(wallet) {
     let tx = await mintBTC.mint();
     console.log("TX:", tx.hash);
     await delay(60000);
-    await waitForSwapSuccess(tx.hash);
+    await waitForSuccess(tx.hash);
 
     console.log("Minting ETH...");
     tx = await mintETH.mint();
     console.log("TX:", tx.hash);
     await delay(60000);
-    await waitForSwapSuccess(tx.hash);
+    await waitForSuccess(tx.hash);
 
     console.log("Minting USDT...");
     tx = await mintUSDT.mint();
     console.log("TX:", tx.hash);
     await delay(60000);
-    await waitForSwapSuccess(tx.hash);
+    await waitForSuccess(tx.hash);
 
     console.log("✅ Semua mint berhasil!\n");
   } catch (err) {
@@ -87,7 +87,7 @@ async function swap(wallet, params) {
     const tx = await contract.exactInputSingle(params, { gasLimit: GAS_LIMIT, gasPrice });
     console.log("📤 TX:", tx.hash);
     await delay(10000);
-    await waitForSwapSuccess(tx.hash);
+    await waitForSuccess(tx.hash);
   } catch (err) {
     console.error("❌ Swap failed:", err.reason || err.message);
   }
@@ -100,7 +100,7 @@ async function approveIfNeeded(wallet, tokenAddress, amountIn) {
     console.log(`🔓 Approving ${tokenAddress}...`);
     const tx = await token.approve(ROUTER, ethers.MaxUint256);
     await delay(60000);
-    await waitForSwapSuccess(tx.hash);
+    await waitForSuccess(tx.hash);
   }
 }
 
