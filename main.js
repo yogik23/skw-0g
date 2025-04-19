@@ -14,11 +14,12 @@ const {
   swap_abi,
   ERC20_ABI,
   delay,
-  generateSwapParams
+  generateSwapParams,
+  spinnerCD,
+  spinner
 } = require('./skw/config');
 
-
-const RPC = "https://0g-evm-rpc.murphynode.net";
+const RPC = "https://evmrpc-testnet.0g.ai";
 const provider = new ethers.JsonRpcProvider(RPC);
 
 const privateKeys = fs.readFileSync(path.join(__dirname, "privatekey.txt"), "utf-8")
@@ -27,20 +28,22 @@ const privateKeys = fs.readFileSync(path.join(__dirname, "privatekey.txt"), "utf
   .filter(k => k.length > 0);
 
 async function waitForSuccess(txHash, tries = 10) {
+  spinner.start(chalk.hex('#3CB371')(` Mengirim Tx ke Blockchain...`));
+  await delay(30000);
   const explorerUrl = `https://chainscan-newton.0g.ai/v1/transaction/${txHash}`;
   for (let i = 0; i < tries; i++) {
     try {
       const res = await axios.get(explorerUrl);
       if (res.data?.result?.outcomeStatus === 0) {
-        console.log(`✅ Success! TX: ${txHash}\n`);
+        spinner.succeed(chalk.hex('#3CB371')(` Success! TX: ${txHash}\n`));
         return;
       }
     } catch (err) {
-      console.error(`Error fetching TX (try ${i + 1}):`, err.message);
+      spinner.fail(chalk.hex('#3CB371')(` Error fetching TX`, err.message));
     }
     await delay(3000);
   }
-  console.log("❌ Transaksi Gagal atau Atau Masih Pending");
+  spinner.stop(`❌ Transaksi Gagal atau Atau Masih Pending\n`);
 }
 
 async function mintToken(wallet) {
@@ -52,19 +55,16 @@ async function mintToken(wallet) {
     console.log("Minting BTC...");
     let tx = await mintBTC.mint();
     console.log("TX:", tx.hash);
-    await delay(60000);
     await waitForSuccess(tx.hash);
 
     console.log("Minting ETH...");
     tx = await mintETH.mint();
     console.log("TX:", tx.hash);
-    await delay(60000);
     await waitForSuccess(tx.hash);
 
     console.log("Minting USDT...");
     tx = await mintUSDT.mint();
     console.log("TX:", tx.hash);
-    await delay(60000);
     await waitForSuccess(tx.hash);
 
     console.log("✅ Semua mint berhasil!\n");
@@ -75,18 +75,17 @@ async function mintToken(wallet) {
 
 async function swap(wallet, params) {
   const contract = new ethers.Contract(ROUTER, swap_abi, wallet);
-  const gasPrice = ethers.parseUnits("1", "gwei");
+  const gasPrice = ethers.parseUnits("10", "gwei");
 
   const tokenIn = params.tokenIn === USDT_ADDRESS ? "USDT" :
                   params.tokenIn === ETH_ADDRESS ? "ETH" : "BTC";
   const tokenOut = params.tokenOut === USDT_ADDRESS ? "USDT" :
                    params.tokenOut === ETH_ADDRESS ? "ETH" : "BTC";
 
-  console.log(`🔁 Swapping ${ethers.formatUnits(params.amountIn, 18)} ${tokenIn} → ${tokenOut}`);
+  console.log(chalk.hex('#00CED1')(`🔁 Swapping ${ethers.formatUnits(params.amountIn, 18)} ${tokenIn} → ${tokenOut}`));
   try {
     const tx = await contract.exactInputSingle(params, { gasLimit: GAS_LIMIT, gasPrice });
-    console.log("📤 TX:", tx.hash);
-    await delay(10000);
+    console.log(chalk.hex('#FF8C00')(`📤 TX :${tx.hash}`));
     await waitForSuccess(tx.hash);
   } catch (err) {
     console.error("❌ Swap failed:", err.reason || err.message);
@@ -99,7 +98,7 @@ async function approveIfNeeded(wallet, tokenAddress, amountIn) {
   if (allowance < amountIn) {
     console.log(`🔓 Approving ${tokenAddress}...`);
     const tx = await token.approve(ROUTER, ethers.MaxUint256);
-    await delay(60000);
+    await spinnerCD(10);
     await waitForSuccess(tx.hash);
   }
 }
@@ -108,7 +107,7 @@ async function runSwaps(wallet, swapParams) {
   for (const param of swapParams) {
     await approveIfNeeded(wallet, param.tokenIn, param.amountIn);
     await swap(wallet, param);
-    await delay(5000);
+    await spinnerCD(10);
   }
 }
 
@@ -120,13 +119,12 @@ async function main() {
 
     const params = generateSwapParams(wallet);
 
-    await mintToken(wallet);
     await runSwaps(wallet, params.USDT);
     await runSwaps(wallet, params.ETH);
     await runSwaps(wallet, params.BTC);
 
     console.log(chalk.green(`✅ Selesai untuk wallet: ${wallet.address}\n\n`));
-    await delay(10000);
+    await delay(3000);
   }
 }
 
