@@ -1,4 +1,5 @@
 const { ethers } = require('ethers');
+const ora = require('ora');
 
 const BTC_ADDRESS = "0x1e0d871472973c562650e991ed8006549f8cbefc";
 const ETH_ADDRESS = "0xce830d0905e0f7a9b300401729761579c5fb6bd6";
@@ -52,6 +53,28 @@ function generateSwapParams(wallet) {
   };
 }
 
+async function spinnerCD(seconds) {
+    const spinner = ora().start();
+
+    return new Promise((resolve) => {
+        let countdown = seconds;
+        const countdownInterval = setInterval(() => {
+            if (countdown <= 0) {
+                clearInterval(countdownInterval);
+                spinner.succeed();
+                resolve();
+            } else {
+                spinner.text = chalk.cyan(`${countdown} detik...`);
+                countdown--;
+            }
+        }, 1000);
+    });
+}
+
+const spinner = ora({
+  color: "cyan",
+});
+
 module.exports = {
   BTC_ADDRESS,
   ETH_ADDRESS,
@@ -62,5 +85,7 @@ module.exports = {
   swap_abi,
   ERC20_ABI,
   delay,
-  generateSwapParams
+  generateSwapParams,
+  spinnerCD,
+  spinner
 };
