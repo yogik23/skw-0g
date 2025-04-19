@@ -40,7 +40,9 @@ async function waitForSuccess(txHash, tries = 10) {
         return;
       }
     } catch (err) {
-      spinner.fail(chalk.hex('#3CB371')(` Error fetching TX`, err.message));
+      spinner.stop();
+      console.error(chalk.hex('#3CB371')(`❌ Error fetching TX: ${err.message}\n`));
+
     }
     await delay(3000);
   }
