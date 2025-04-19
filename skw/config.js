@@ -1,5 +1,6 @@
 const { ethers } = require('ethers');
 const ora = require('ora');
+const chalk = require('chalk');
 
 const BTC_ADDRESS = "0x1e0d871472973c562650e991ed8006549f8cbefc";
 const ETH_ADDRESS = "0xce830d0905e0f7a9b300401729761579c5fb6bd6";
@@ -7,9 +8,20 @@ const USDT_ADDRESS = "0x9a87c2412d500343c073e5ae5394e3be3874f76b";
 const ROUTER = "0xE233D75Ce6f04C04610947188DEC7C55790beF3b";
 const GAS_LIMIT = 500000;
 
-const mint_abi = [ "function mint() public" ];
-const swap_abi = [ "function exactInputSingle((address,address,uint24,address,uint256,uint256,uint256,uint160)) payable returns (uint256)" ];
-const ERC20_ABI = [ "function approve(address spender, uint256 amount) external returns (bool)", "function allowance(address owner, address spender) view returns (uint256)" ];
+const mint_abi = ["function mint() public"];
+
+const swap_abi = [
+  `function exactInputSingle(
+    (address tokenIn, address tokenOut, uint24 fee, address recipient,
+    uint256 deadline, uint256 amountIn, uint256 amountOutMinimum, uint160 sqrtPriceLimitX96) params
+  ) payable returns (uint256)`
+];
+
+const ERC20_ABI = [
+  "function approve(address spender, uint256 amount) external returns (bool)",
+  "function allowance(address owner, address spender) view returns (uint256)"
+];
+
 const delay = (ms) => new Promise((res) => setTimeout(res, ms));
 
 function generateSwapParams(wallet) {
