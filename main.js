@@ -29,25 +29,30 @@ const privateKeys = fs.readFileSync(path.join(__dirname, "privatekey.txt"), "utf
   .filter(k => k.length > 0);
 
 async function waitForSuccess(txHash, tries = 10) {
-  spinner.start(chalk.hex('#3CB371')(` Mengirim Tx ke Blockchain...`));
-  await delay(30000);
   const explorerUrl = `https://chainscan-newton.0g.ai/v1/transaction/${txHash}`;
   for (let i = 0; i < tries; i++) {
     try {
-      const res = await axios.get(explorerUrl);
-      if (res.data?.result?.outcomeStatus === 0) {
-        spinner.succeed(chalk.hex('#3CB371')(` Success! TX: ${txHash}\n`));
-        return;
-      }
-    } catch (err) {
-      spinner.stop();
-      console.error(chalk.hex('#3CB371')(`❌ Error fetching TX: ${err.message}\n`));
+      spinner.start(chalk.hex('#3CB371')(` Mengirim Transaksi ke Blockchain...`));
+      await delay(30000);
 
+      const res = await axios.get(explorerUrl);
+
+      if (res.data?.result?.outcomeStatus === 0) {
+        spinner.succeed(chalk.hex('#3CB371')(` Success! https://chainscan-newton.0g.ai/tx/${txHash}\n`));
+        return;
+      } else {
+        spinner.stop();
+        console.log(chalk.hex('#FFD700')(` Transaksi Gagal atau Masih Pending https://chainscan-newton.0g.ai/tx/${txHash}\n`));
+      }
+
+    } catch (err) {
+      spinner.fail(chalk.hex('#FF4500')(` Error fetching TX: ${err.message}\n`));
     }
+
     await delay(3000);
   }
-  spinner.stop(`❌ Transaksi Gagal atau Atau Masih Pending\n`);
 }
+
 
 async function mintToken(wallet) {
   try {
@@ -88,7 +93,6 @@ async function swap(wallet, params) {
   console.log(chalk.hex('#00CED1')(`🔁 Swapping ${ethers.formatUnits(params.amountIn, 18)} ${tokenIn} → ${tokenOut}`));
   try {
     const tx = await contract.exactInputSingle(params, { gasLimit: GAS_LIMIT, gasPrice });
-    console.log(chalk.hex('#FF8C00')(`📤 TX :${tx.hash}`));
     await waitForSuccess(tx.hash);
   } catch (err) {
     console.error("❌ Swap failed:", err.reason || err.message);
