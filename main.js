@@ -3,6 +3,7 @@ const path = require("path");
 const axios = require("axios");
 const { ethers } = require("ethers");
 const chalk = require("chalk");
+const { displayskw } = require('./skw/displayskw');
 
 const {
   BTC_ADDRESS,
@@ -113,6 +114,7 @@ async function runSwaps(wallet, swapParams) {
 
 async function main() {
   console.clear();
+  displayskw();
   for (const privateKey of privateKeys) {
     const wallet = new ethers.Wallet(privateKey, provider);
     console.log(chalk.cyan(`🔑 Wallet: ${wallet.address}\n`));
