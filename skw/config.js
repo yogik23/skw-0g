@@ -2,11 +2,11 @@ const { ethers } = require('ethers');
 const ora = require('ora');
 const chalk = require('chalk');
 
-const BTC_ADDRESS = "0x1e0d871472973c562650e991ed8006549f8cbefc";
-const ETH_ADDRESS = "0xce830d0905e0f7a9b300401729761579c5fb6bd6";
-const USDT_ADDRESS = "0x9a87c2412d500343c073e5ae5394e3be3874f76b";
-const ROUTER = "0xE233D75Ce6f04C04610947188DEC7C55790beF3b";
-const GAS_LIMIT = 500000;
+const BTC_ADDRESS = "0x6dc29491a8396bd52376b4f6da1f3e889c16ca85";
+const ETH_ADDRESS = "0x2619090fcfdb99a8ccf51c76c9467f7375040eeb";
+const USDT_ADDRESS = "0xa8f030218d7c26869cadd46c5f10129e635cd565";
+const ROUTER = "0x16a811adc55a99b4456f62c54f12d3561559a268";
+const GAS_LIMIT = 200000;
 
 const mint_abi = ["function mint() public"];
 
@@ -30,12 +30,12 @@ function generateSwapParams(wallet) {
       {
         tokenIn: USDT_ADDRESS, tokenOut: ETH_ADDRESS, fee: 3000, recipient: wallet.address,
         deadline: Math.floor(Date.now() / 1000) + 60,
-        amountIn: ethers.parseUnits("10", 18), amountOutMinimum: 0, sqrtPriceLimitX96: 0n
+        amountIn: ethers.parseUnits("50", 18), amountOutMinimum: 0, sqrtPriceLimitX96: 0n
       },
       {
         tokenIn: USDT_ADDRESS, tokenOut: BTC_ADDRESS, fee: 3000, recipient: wallet.address,
         deadline: Math.floor(Date.now() / 1000) + 60,
-        amountIn: ethers.parseUnits("10", 18), amountOutMinimum: 0, sqrtPriceLimitX96: 0n
+        amountIn: ethers.parseUnits("70", 18), amountOutMinimum: 0, sqrtPriceLimitX96: 0n
       }
     ],
     ETH: [
