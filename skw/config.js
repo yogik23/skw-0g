@@ -1,5 +1,6 @@
 import { ethers } from "ethers";
 import { 
+  logAccount,
   logError,
   logCache,
   logInfo,
