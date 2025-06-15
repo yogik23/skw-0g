@@ -4,6 +4,7 @@ import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
 import { 
+  logAccount,
   logError,
   logCache,
   logInfo,
