@@ -1,6 +1,7 @@
 import { ethers } from "ethers";
 import chalk from "chalk";
 import axios from "axios";
+import cron from "node-cron";
 import dotenv from "dotenv";
 import fs from "fs";
 import path from "path";
@@ -209,7 +210,7 @@ async function sendTG(address, txCount) {
   }
 }
 
-async function main() {
+async function startBot() {
   try {
     console.clear();
     for (const pk of privateKeys) {
@@ -234,6 +235,21 @@ async function main() {
   } catch (err) {
     logError(`Error : ${err.message || err}\n`);
   }
+}
+
+async function main() {
+  const date = new Date().toISOString().split('T')[0];
+  cron.schedule('0 1 * * *', async () => { 
+    await startBot();
+    console.log();
+    console.log(chalk.hex('#FF00FF')(`${date} Cron AKTIF`));
+    console.log(chalk.hex('#FF1493')('Besok Jam 08:00 WIB Autobot Akan Run'));
+  });
+
+  await startBot();
+  console.log();
+  console.log(chalk.hex('#FF00FF')(`${date} Cron AKTIF`));
+  console.log(chalk.hex('#FF1493')('Besok Jam 08:00 WIB Autobot Akan Run'));
 }
 
 main();
