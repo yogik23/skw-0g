@@ -150,15 +150,5 @@ export function generateSwapParams(wallet) {
       amountOutMinimum: 0,
       sqrtPriceLimitX96: 0,
     },
-    {
-      tokenIn: ETH_ADDRESS,
-      tokenOut: BTC_ADDRESS,
-      fee: 3000,
-      recipient: wallet.address,
-      deadline: Math.floor(Date.now() / 1000) + 60,
-      amountIn: ethers.parseUnits(RandomAmount(0.1, 0.5, 2), 18),
-      amountOutMinimum: 0,
-      sqrtPriceLimitX96: 0,
-    },
   ]
 }
