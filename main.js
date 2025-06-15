@@ -1,116 +1,157 @@
-const { ethers } = require("ethers");
-const chalk = require("chalk");
-const fs = require("fs");
-const path = require("path");
-const { displayskw } = require('./skw/displayskw');
+import { ethers } from "ethers";
+import chalk from "chalk";
+import fs from "fs";
+import path from "path";
+import { fileURLToPath } from "url";
+import { 
+  logError,
+  logCache,
+  logInfo,
+  logSuccess,
+  delay,
+} from "./skw/logger.js";
 
-const {
+import { 
   BTC_ADDRESS,
   ETH_ADDRESS,
   USDT_ADDRESS,
-  ROUTER,
+  SWAP_ROUTER,
   GAS_LIMIT,
-  mint_abi,
+  getTokenName,
+  RandomAmount,
+  erc20_abi,
   swap_abi,
-  ERC20_ABI,
-  delay,
+  buildPath,
+  cekbalance,
+  mintToken,
+  approve,
   generateSwapParams,
-  spinnerCD,
-  spinner
-} = require('./skw/config');
+} from "./skw/config.js";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const RPC = "https://evmrpc-testnet.0g.ai/";
 const provider = new ethers.JsonRpcProvider(RPC);
 
-const privateKeys = fs.readFileSync(path.join(__dirname, "privatekey.txt"), "utf-8")
+const privateKeys = fs
+  .readFileSync(path.join(__dirname, "privatekey.txt"), "utf-8")
   .split("\n")
-  .map(k => k.trim())
-  .filter(k => k.length > 0);
+  .map((k) => k.trim())  
+  .filter((k) => k.length > 0);
 
-async function mintToken(wallet) {
+async function allbalance(wallet) {
   try {
-    const mintBTC = new ethers.Contract(BTC_ADDRESS, mint_abi, wallet);
-    const mintETH = new ethers.Contract(ETH_ADDRESS, mint_abi, wallet);
-    const mintUSDT = new ethers.Contract(USDT_ADDRESS, mint_abi, wallet);
+    const getBalance = await provider.getBalance(wallet.address);
+    const Ogformatbalance = ethers.formatUnits(getBalance,18);
+    const OgBalance = parseFloat(Ogformatbalance).toFixed(5);
 
-    console.log("Minting BTC...");
-    tx = await mintBTC.mint();
-    console.log(chalk.hex('#FF8C00')(`⏳ Tx dikirim ke blokchain!\n🌐 https://chainscan-galileo.0g.ai/tx/${tx.hash}`));
-    await tx.wait();
-    console.log(chalk.hex('#66CDAA')(`✅ Mint success\n`));
+    const btcformatbalance = cekbalance(wallet, BTC_ADDRESS);
+    const btcBalance = parseFloat(btcformatbalance).toFixed(5);
 
-    console.log("Minting ETH...");
-    tx = await mintETH.mint();
-    console.log(chalk.hex('#FF8C00')(`⏳ Tx dikirim ke blokchain!\n🌐 https://chainscan-galileo.0g.ai/tx/${tx.hash}`));
-    await tx.wait();
-    console.log(chalk.hex('#66CDAA')(`✅ Mint success\n`));
+    const ethformatbalance = cekbalance(wallet, ETH_ADDRESS);
+    const ethBalance = parseFloat(ethformatbalance).toFixed(3);
 
-    console.log("Minting USDT...");
-    tx = await mintUSDT.mint();
-    console.log(chalk.hex('#FF8C00')(`⏳ Tx dikirim ke blokchain!\n🌐 https://chainscan-galileo.0g.ai/tx/${tx.hash}`));
-    await tx.wait();
-    console.log(chalk.hex('#66CDAA')(`✅ Mint success\n`));
+    const usdtformatbalance = cekbalance(wallet, USDT_ADDRESS);
+    const usdtBalance = parseFloat(usdtformatbalance).toFixed(2);
 
+    logAccount(`Wallet: ${wallet.address}`);
+    logInfo(`Balance ${OgBalance} 0g`);
+    logInfo(`Balance ${btcBalance} BTC`);
+    logInfo(`Balance ${ethBalance} ETH`);
+    logInfo(`Balance ${usdtBalance} USDT\n`);
   } catch (err) {
-    console.error("❌ Mint gagal:", err.message);
+    logError(`Error Cek AllBalance : ${err.message || err}\n`);
   }
 }
 
-async function swap(wallet, params) {
-  const contract = new ethers.Contract(ROUTER, swap_abi, wallet);
+async function mintAllToken(wallet) {
+  await mintToken(wallet, USDT_ADDRESS);
+  await delay(5000);
 
-  const tokenIn = params.tokenIn === USDT_ADDRESS ? "USDT" :
-                  params.tokenIn === ETH_ADDRESS ? "ETH" : "BTC";
-  const tokenOut = params.tokenOut === USDT_ADDRESS ? "USDT" :
-                   params.tokenOut === ETH_ADDRESS ? "ETH" : "BTC";
+  await mintToken(wallet, ETH_ADDRESS);
+  await delay(5000);
 
-  console.log(chalk.hex('#00CED1')(`🔁 Swapping ${ethers.formatUnits(params.amountIn, 18)} ${tokenIn} → ${tokenOut}`));
+  await mintToken(wallet, BTC_ADDRESS);
+}
+
+async function swapbtc(wallet, tokenIn, tokenOut, amount) {
   try {
-    const tx = await contract.exactInputSingle(params, { gasLimit: GAS_LIMIT });
-    console.log(chalk.hex('#FF8C00')(`⏳ Tx dikirim ke blokchain!\n🌐 https://chainscan-galileo.0g.ai/tx/${tx.hash}`));
+    const contract = new ethers.Contract(SWAP_ROUTER, swap_abi, wallet);
+    const fee = 3000;
+    const amountswap = ethers.parseUnits(amount, 18);
+    const deadline = Math.floor(Date.now() / 1000) + 60;
+
+    const path = buildPath({ 
+      tokenIn: tokenIn, 
+      fee: fee, 
+      tokenOut: tokenOut 
+    });
+
+    logCache(`Swap ${amount} ${getTokenName(tokenIn)} ke ${getTokenName(tokenOut)}`);
+    await approve(wallet, tokenIn, SWAP_ROUTER, amountswap);
+
+    const param = {
+      path: path,
+      recipient: wallet.address,
+      deadline: deadline,
+      amountIn: amountswap,
+      amountOutMinimum: 0n,
+    }
+
+    const tx = await contract.exactInput(param, { gasLimit: GAS_LIMIT });
+    logInfo(`Tx swap ->> https://chainscan-galileo.0g.ai/tx/${tx.hash}`);
+
     await tx.wait();
-    console.log(chalk.hex('#66CDAA')(`✅ Swap success\n`));
+    logSuccess(`Swap berhasil!\n`);
+    await delay(5000);
   } catch (err) {
-    console.error("❌ Swap failed:", err.reason || err.message);
+    logError(`Error during Swap : ${err.message || err}\n`);
   }
 }
 
-async function approveIfNeeded(wallet, tokenAddress, amountIn) {
-  const token = new ethers.Contract(tokenAddress, ERC20_ABI, wallet);
-  const allowance = await token.allowance(wallet.address, ROUTER);
-  if (allowance < amountIn) {
-    console.log(`🔓 Approving ${tokenAddress}...`);
-    const tx = await token.approve(ROUTER, ethers.MaxUint256);
-    console.log(chalk.hex('#FF8C00')(`⏳ Tx dikirim ke blokchain!\n🌐 https://chainscan-galileo.0g.ai/tx/${tx.hash}`));
-    await await tx.wait();
-    console.log(chalk.hex('#66CDAA')(`✅ Mint success\n`));
-  }
-}
+async function swap(wallet) {
+  try {
+    const contract = new ethers.Contract(SWAP_ROUTER, swap_abi, wallet);
+    const swapParams = generateSwapParams(wallet);
+    for (const param of swapParams) {
+      const amountswap = ethers.formatUnits(param.amountIn, 18);
+      logCache(`Swap ${amountswap} ${getTokenName(param.tokenIn)} ke ${getTokenName(param.tokenOut)}`);
+      await approve(wallet, param.tokenIn, SWAP_ROUTER, param.amountIn);
 
-async function runSwaps(wallet, swapParams) {
-  for (const param of swapParams) {
-    await approveIfNeeded(wallet, param.tokenIn, param.amountIn);
-    await swap(wallet, param);
-    await spinnerCD(3);
+      const tx = await contract.exactInputSingle(param, { gasLimit: GAS_LIMIT });
+      logInfo(`Tx dikirim ->> https://chainscan-galileo.0g.ai/tx/${tx.hash}`);
+      await tx.wait();
+      logSuccess(`Swap berhasil!\n`);
+      await delay(7000);
+    }
+
+    const randombtceth = RandomAmount(0.0001, 0.0007, 4);
+    await swapbtc(wallet, BTC_ADDRESS, ETH_ADDRESS, randombtceth);
+    await delay(7000);
+
+    const randombtcusdt = RandomAmount(0.0001, 0.0007, 4);
+    await swapbtc(wallet, BTC_ADDRESS, USDT_ADDRESS, randombtcusdt);
+  } catch (err) {
+    logError(`Error during Swap : ${err.message || err}\n`);
   }
 }
 
 async function main() {
-  console.clear();
-  displayskw();
-  for (const privateKey of privateKeys) {
-    const wallet = new ethers.Wallet(privateKey, provider);
-    console.log(chalk.cyan(`🔑 Wallet: ${wallet.address}\n`));
-    await mintToken(wallet);
+  try {
+    console.clear();
+    for (const pk of privateKeys) {
+      const wallet = new ethers.Wallet(pk, provider);
+      await allbalance(wallet);
 
-    const params = generateSwapParams(wallet);
+      await mintAllToken(wallet);
+      await delay(5000);
 
-    await runSwaps(wallet, params.USDT);
-    await runSwaps(wallet, params.ETH);
-    await runSwaps(wallet, params.BTC);
-
-    console.log(chalk.green(`✅ Selesai untuk wallet: ${wallet.address}\n\n`));
-    await delay(3000);
+      await swap(wallet);
+      await delay(7000);
+    }
+  } catch (err) {
+    logError(`Error : ${err.message || err}\n`);
   }
 }
 
