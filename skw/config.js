@@ -41,7 +41,7 @@ export function RandomAmount(min, max, decimalPlaces) {
   return (Math.random() * (max - min) + min).toFixed(decimalPlaces);
 }
 
-export function randomdelay(min = 7000, max = 15000) {
+export function randomdelay(min = 15000, max = 30000) {
   return Math.floor(Math.random() * (max - min) + min);
 }
 
