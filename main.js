@@ -23,6 +23,7 @@ import {
   GAS_LIMIT,
   getTokenName,
   RandomAmount,
+  randomdelay,
   erc20_abi,
   swap_abi,
   buildPath,
@@ -71,10 +72,10 @@ async function allbalance(wallet) {
 
 async function mintAllToken(wallet) {
   await mintToken(wallet, USDT_ADDRESS);
-  await delay(5000);
+  await delay(randomdelay());
 
   await mintToken(wallet, ETH_ADDRESS);
-  await delay(5000);
+  await delay(randomdelay());
 
   await mintToken(wallet, BTC_ADDRESS);
 }
@@ -108,7 +109,7 @@ async function swapbtc(wallet, tokenIn, tokenOut, amount) {
 
     await tx.wait();
     logSuccess(`Swap berhasil!\n`);
-    await delay(5000);
+    await delay(randomdelay());
   } catch (err) {
     logError(`Error during Swap : ${err.message || err}\n`);
   }
@@ -127,12 +128,12 @@ async function swap(wallet) {
       logInfo(`Tx dikirim ->> https://chainscan-galileo.0g.ai/tx/${tx.hash}`);
       await tx.wait();
       logSuccess(`Swap berhasil!\n`);
-      await delay(7000);
+      await delay(randomdelay());
     }
 
     const randombtceth = RandomAmount(0.0001, 0.0007, 4);
     await swapbtc(wallet, BTC_ADDRESS, ETH_ADDRESS, randombtceth);
-    await delay(7000);
+    await delay(randomdelay());
 
     const randombtcusdt = RandomAmount(0.0001, 0.0007, 4);
     await swapbtc(wallet, BTC_ADDRESS, USDT_ADDRESS, randombtcusdt);
@@ -183,16 +184,16 @@ async function main() {
       await allbalance(wallet);
 
       await mintAllToken(wallet);
-      await delay(5000);
+      await delay(randomdelay());
 
       await swap(wallet);
-      await delay(5000);
+      await delay(randomdelay());
 
       const txCount = await provider.getTransactionCount(wallet.address);
       logAccount(`Totaltx ${wallet.address}`);
       logAccount(`-->>>: ${txCount}`);
       await sendTG(wallet.address, txCount);
-      await delay(5000);
+      await delay(randomdelay());
     }
   } catch (err) {
     logError(`Error : ${err.message || err}\n`);
