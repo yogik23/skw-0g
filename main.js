@@ -98,7 +98,7 @@ async function onChainGM(wallet) {
     await tx.wait();
     logSuccess(`OnChainGM berhasil!\n`);
   } catch (error) {
-    logError(`Error during Swap : ${error.message || error}\n`);
+    logError(`Error onChainGM : ${error.message || error}\n`);
   }
 }
 
