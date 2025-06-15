@@ -1,20 +1,24 @@
 {
-  "name": "0g Galelio",
+  "name": "0g-galileo-bot",
   "version": "1.0.0",
-  "description": "",
+  "description": "0g Galelio Autobot",
   "main": "main.js",
+  "type": "module",
   "scripts": {
     "start": "node main.js"
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
-  "type": "module",
+  "keywords": [
+    "0g",
+    "galileo",
+    "Autobot"
+  ],
+  "author": "SKW-AIRDROP",
+  "license": "MIT",
   "dependencies": {
-    "ethers": "^6.13.5",
-    "chalk": "^5.3.0",
     "axios": "^1.10.0",
-    "node-cron": "^4.0.5",
-    "dotenv": "^16.5.0"
+    "chalk": "^5.3.0",
+    "dotenv": "^16.5.0",
+    "ethers": "^6.13.5",
+    "node-cron": "^4.0.5"
   }
 }
