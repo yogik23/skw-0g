@@ -5,7 +5,7 @@ import {
   logInfo,
   logSuccess,
   delay,
-} from "./skw/logger.js";
+} from "./logger.js";
 
 export const BTC_ADDRESS = "0x36f6414FF1df609214dDAbA71c84f18bcf00F67d";
 export const ETH_ADDRESS = "0x0fE9B43625fA7EdD663aDcEC0728DD635e4AbF7c";
