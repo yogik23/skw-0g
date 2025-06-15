@@ -19,6 +19,7 @@ import {
   GAS_LIMIT,
   getTokenName,
   RandomAmount,
+  escape,
   erc20_abi,
   swap_abi,
   buildPath,
@@ -137,6 +138,31 @@ async function swap(wallet) {
   }
 }
 
+async function sendTG(address, txCount) {
+  const retries = "5";
+  const date = new Date().toISOString().split('T')[0];
+  const message = `🌐 *0g Testnet*\n📅 *${escape(date)}*\n👛 *${escape(address)}*\n🔣 *Totaltx: ${escape(TotalPoints)}*`;
+
+  for (let attempt = 1; attempt <= retries; attempt++) {
+    try {
+      const response = await axios.post(
+        `https://api.telegram.org/bot${process.env.BOT_TOKEN}/sendMessage`,
+        {
+          chat_id: process.env.CHAT_ID,
+          text: message,
+          parse_mode: "MarkdownV2",
+        }
+      );
+      logSuccess(`Message sent to Telegram successfully!\n`);
+      return response.data;
+    } catch (error) {
+      logError(`Error sendTG : ${err.message || err}\n`);
+      if (attempt < retries) await delay(2000);
+      else return null;
+    }
+  }
+}
+
 async function main() {
   try {
     console.clear();
@@ -148,7 +174,10 @@ async function main() {
       await delay(5000);
 
       await swap(wallet);
-      await delay(7000);
+      await delay(5000);
+
+      const txCount = await provider.getTransactionCount(wallet.address);
+      await sendTG(wallet.address, txCount);
     }
   } catch (err) {
     logError(`Error : ${err.message || err}\n`);
