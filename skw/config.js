@@ -70,8 +70,27 @@ export async function mintToken(wallet, tokenmint) {
     logCache(`Claim Faucet ${getTokenName(tokenmint)}`);
     const tx = await contract.mint();
     logInfo(`Tx Claim ->> https://chainscan-galileo.0g.ai/tx/${tx.hash}`);
-    await tx.wait();
-    logSuccess(`Claim berhasil!\n`);
+
+    let attempts = 0;
+    while (attempts < 5) {
+      try {
+        await tx.wait();
+        break;
+      } catch (err) {
+        if (err.message?.includes("Too many requests")) {
+          attempts++;
+          await delay(2000);
+        } else {
+          throw err;
+        }
+      }
+    }
+
+    if (attempts == 5) {
+      logError(`Gagal claim, rate limit`);
+    } else {
+      logSuccess(`Claim berhasil!\n`);
+    }
 
   } catch (err) {
     logError(`Error Claim Faucet : ${err.message || err}\n`);
