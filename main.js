@@ -20,6 +20,8 @@ import {
   ETH_ADDRESS,
   USDT_ADDRESS,
   SWAP_ROUTER,
+  ca_onChainGM,
+  data_onChainGM,
   GAS_LIMIT,
   getTokenName,
   RandomAmount,
@@ -78,6 +80,25 @@ async function mintAllToken(wallet) {
   await delay(randomdelay());
 
   await mintToken(wallet, BTC_ADDRESS);
+}
+
+async function onChainGM(wallet) {
+  try {
+    const fee = ethers.parseEther("0.00029");
+    logCache(`GM OnChainGM`);
+    const tx = await wallet.sendTransaction({ 
+      to: ca_onChainGM,
+      value: fee,
+      data: data_onChainGM,
+      gasLimit: GAS_LIMIT
+    });
+
+    logInfo(`GM dikirim ->> https://chainscan-galileo.0g.ai/tx/${tx.hash}`);
+    await tx.wait();
+    logSuccess(`OnChainGM berhasil!\n`);
+  } catch (error) {
+    logError(`Error during Swap : ${error.message || error}\n`);
+  }
 }
 
 async function swapETHBTC(wallet, tokenIn, tokenOut, amount) {
@@ -194,6 +215,9 @@ async function main() {
     for (const pk of privateKeys) {
       const wallet = new ethers.Wallet(pk, provider);
       await allbalance(wallet);
+
+      await onChainGM(wallet);
+      await delay(randomdelay());
 
       await mintAllToken(wallet);
       await delay(randomdelay());
