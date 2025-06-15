@@ -80,7 +80,7 @@ async function mintAllToken(wallet) {
   await mintToken(wallet, BTC_ADDRESS);
 }
 
-async function swapbtc(wallet, tokenIn, tokenOut, amount) {
+async function swapETHBTC(wallet, tokenIn, tokenOut, amount) {
   try {
     const contract = new ethers.Contract(SWAP_ROUTER, swap_abi, wallet);
     const fee = 3000;
@@ -115,7 +115,7 @@ async function swapbtc(wallet, tokenIn, tokenOut, amount) {
   }
 }
 
-async function swap(wallet) {
+async function swapUSDTETH(wallet) {
   try {
     const contract = new ethers.Contract(SWAP_ROUTER, swap_abi, wallet);
     const swapParams = generateSwapParams(wallet);
@@ -130,13 +130,25 @@ async function swap(wallet) {
       logSuccess(`Swap berhasil!\n`);
       await delay(randomdelay());
     }
+  } catch (err) {
+    logError(`Error during Swap : ${err.message || err}\n`);
+  }
+}
+
+async function allswap(wallet) {
+  try {
+    await swapUSDTETH(wallet);
+
+    const randomethbtc = RandomAmount(0.1, 1, 1);
+    await swapETHBTC(wallet, ETH_ADDRESS, BTC_ADDRESS, randomethbtc);
+    await delay(randomdelay());
 
     const randombtceth = RandomAmount(0.0001, 0.0007, 4);
-    await swapbtc(wallet, BTC_ADDRESS, ETH_ADDRESS, randombtceth);
+    await swapETHBTC(wallet, BTC_ADDRESS, ETH_ADDRESS, randombtceth);
     await delay(randomdelay());
 
     const randombtcusdt = RandomAmount(0.0001, 0.0007, 4);
-    await swapbtc(wallet, BTC_ADDRESS, USDT_ADDRESS, randombtcusdt);
+    await swapETHBTC(wallet, BTC_ADDRESS, USDT_ADDRESS, randombtcusdt);
   } catch (err) {
     logError(`Error during Swap : ${err.message || err}\n`);
   }
@@ -186,7 +198,7 @@ async function main() {
       await mintAllToken(wallet);
       await delay(randomdelay());
 
-      await swap(wallet);
+      await allswap(wallet);
       await delay(randomdelay());
 
       const txCount = await provider.getTransactionCount(wallet.address);
