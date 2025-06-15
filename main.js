@@ -1,8 +1,11 @@
 import { ethers } from "ethers";
 import chalk from "chalk";
+import axios from "axios";
+import dotenv from "dotenv";
 import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
+dotenv.config();
 import { 
   logAccount,
   logError,
@@ -47,13 +50,13 @@ async function allbalance(wallet) {
     const Ogformatbalance = ethers.formatUnits(getBalance,18);
     const OgBalance = parseFloat(Ogformatbalance).toFixed(5);
 
-    const btcformatbalance = cekbalance(wallet, BTC_ADDRESS);
+    const btcformatbalance = await cekbalance(wallet, BTC_ADDRESS);
     const btcBalance = parseFloat(btcformatbalance).toFixed(5);
 
-    const ethformatbalance = cekbalance(wallet, ETH_ADDRESS);
+    const ethformatbalance = await cekbalance(wallet, ETH_ADDRESS);
     const ethBalance = parseFloat(ethformatbalance).toFixed(3);
 
-    const usdtformatbalance = cekbalance(wallet, USDT_ADDRESS);
+    const usdtformatbalance = await cekbalance(wallet, USDT_ADDRESS);
     const usdtBalance = parseFloat(usdtformatbalance).toFixed(2);
 
     logAccount(`Wallet: ${wallet.address}`);
@@ -139,9 +142,15 @@ async function swap(wallet) {
 }
 
 async function sendTG(address, txCount) {
-  const retries = "5";
-  const date = new Date().toISOString().split('T')[0];
-  const message = `🌐 *0g Testnet*\n📅 *${escape(date)}*\n👛 *${escape(address)}*\n🔣 *Totaltx: ${escape(TotalPoints)}*`;
+  if (process.env.SEND_TO_TG !== "true") {
+    return;
+  }
+
+  const retries = 5;
+  const date = new Date().toISOString().split("T")[0];
+  const escape = (text) => text.toString().replace(/([_*[\]()~`>#+-=|{}.!])/g, "\\$1");
+
+  const message = `🌐 *0g Testnet*\n📅 *${escape(date)}*\n👛 *${escape(address)}*\n🔣 *Total TX: ${escape(txCount)}*`;
 
   for (let attempt = 1; attempt <= retries; attempt++) {
     try {
@@ -156,9 +165,12 @@ async function sendTG(address, txCount) {
       logSuccess(`Message sent to Telegram successfully!\n`);
       return response.data;
     } catch (error) {
-      logError(`Error sendTG : ${err.message || err}\n`);
-      if (attempt < retries) await delay(2000);
-      else return null;
+      logError(`Error sendTG : ${error.message || error}\n`);
+      if (attempt < retries) {
+        await delay(3000); 
+      } else {
+        return null;
+      }
     }
   }
 }
@@ -177,7 +189,10 @@ async function main() {
       await delay(5000);
 
       const txCount = await provider.getTransactionCount(wallet.address);
+      logAccount(`Totaltx ${wallet.address}`);
+      logAccount(`-->>>: ${txCount}`);
       await sendTG(wallet.address, txCount);
+      await delay(5000);
     }
   } catch (err) {
     logError(`Error : ${err.message || err}\n`);
