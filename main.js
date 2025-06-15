@@ -19,7 +19,6 @@ import {
   GAS_LIMIT,
   getTokenName,
   RandomAmount,
-  escape,
   erc20_abi,
   swap_abi,
   buildPath,
