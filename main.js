@@ -23,6 +23,7 @@ import {
   SWAP_ROUTER,
   ca_onChainGM,
   data_onChainGM,
+  gm_topic,
   GAS_LIMIT,
   getTokenName,
   RandomAmount,
@@ -32,6 +33,7 @@ import {
   buildPath,
   cekbalance,
   mintToken,
+  onChainGM,
   approve,
   generateSwapParams,
 } from "./skw/config.js";
@@ -83,22 +85,40 @@ async function mintAllToken(wallet) {
   await mintToken(wallet, BTC_ADDRESS);
 }
 
-async function onChainGM(wallet) {
+async function allGM(wallet) {
   try {
-    const fee = ethers.parseEther("0.00029");
-    logCache(`GM OnChainGM`);
-    const tx = await wallet.sendTransaction({ 
-      to: ca_onChainGM,
-      value: fee,
-      data: data_onChainGM,
-      gasLimit: GAS_LIMIT
-    });
+    const currentBlock = await provider.getBlockNumber();
+    const fromBlock = Math.max(0, currentBlock - 10000);
+    const toBlock = currentBlock;
 
-    logInfo(`GM dikirim ->> https://chainscan-galileo.0g.ai/tx/${tx.hash}`);
-    await tx.wait();
-    logSuccess(`OnChainGM berhasil!\n`);
+    const filter = {
+      address: ca_onChainGM,
+      topics: [gm_topic, ethers.zeroPadValue(wallet.address, 32)],
+      fromBlock,
+      toBlock,
+    };
+  
+    const logs = await provider.getLogs(filter);
+    if (logs.length == 0) {
+      await onChainGM(wallet);
+      return true;
+    }
+
+    const lastBlock = logs[logs.length - 1].blockNumber;
+    const block = await provider.getBlock(lastBlock);
+    const now = Math.floor(Date.now() / 1000);
+    const elapsed = now - block.timestamp;
+
+    if (elapsed < 86400) {
+      const cooldownLeft = 86400 - elapsed;
+      logCache(`onChainGM Masih cooldown ${Math.floor(cooldownLeft/3600)} jam ${Math.floor((cooldownLeft%3600)/60)} menit\n`); 
+    } else {
+      await onChainGM(wallet);
+    }
+
   } catch (error) {
-    logError(`Error onChainGM : ${error.message || error}\n`);
+    console.error(error);
+    return null;
   }
 }
 
@@ -128,7 +148,6 @@ async function swapETHBTC(wallet, tokenIn, tokenOut, amount) {
 
     const tx = await contract.exactInput(param, { gasLimit: GAS_LIMIT });
     logInfo(`Tx swap ->> https://chainscan-galileo.0g.ai/tx/${tx.hash}`);
-
     await tx.wait();
     logSuccess(`Swap berhasil!\n`);
     await delay(randomdelay());
@@ -217,7 +236,7 @@ async function startBot() {
       const wallet = new ethers.Wallet(pk, provider);
       await allbalance(wallet);
 
-      await onChainGM(wallet);
+      await allGM(wallet);
       await delay(randomdelay());
 
       await mintAllToken(wallet);
