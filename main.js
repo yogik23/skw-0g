@@ -6,6 +6,7 @@ import dotenv from "dotenv";
 import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
+import { displayskw } from './skw/displayskw.js';
 dotenv.config();
 import { 
   logAccount,
@@ -231,6 +232,8 @@ async function sendTG(address, txCount) {
 
 async function startBot() {
   try {
+    displayskw();
+    await delay(6000);
     console.clear();
     for (const pk of privateKeys) {
       const wallet = new ethers.Wallet(pk, provider);
