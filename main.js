@@ -135,7 +135,8 @@ async function swapETHBTC(wallet, tokenIn, tokenOut, amount) {
       fee: fee, 
       tokenOut: tokenOut 
     });
-
+    
+    logAccount(`Wallet: ${wallet.address}`);
     logCache(`Swap ${amount} ${getTokenName(tokenIn)} ke ${getTokenName(tokenOut)}`);
     await approve(wallet, tokenIn, SWAP_ROUTER, amountswap);
 
@@ -163,7 +164,9 @@ async function swapUSDTETH(wallet) {
     const swapParams = generateSwapParams(wallet);
     for (const param of swapParams) {
       const amountswap = ethers.formatUnits(param.amountIn, 18);
+      logAccount(`Wallet: ${wallet.address}`);
       logCache(`Swap ${amountswap} ${getTokenName(param.tokenIn)} ke ${getTokenName(param.tokenOut)}`);
+      
       await approve(wallet, param.tokenIn, SWAP_ROUTER, param.amountIn);
 
       const tx = await contract.exactInputSingle(param, { gasLimit: GAS_LIMIT });
