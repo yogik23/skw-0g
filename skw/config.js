@@ -12,8 +12,9 @@ export const BTC_ADDRESS = "0x36f6414FF1df609214dDAbA71c84f18bcf00F67d";
 export const ETH_ADDRESS = "0x0fE9B43625fA7EdD663aDcEC0728DD635e4AbF7c";
 export const USDT_ADDRESS = "0x3eC8A8705bE1D5ca90066b37ba62c4183B024ebf";
 export const SWAP_ROUTER = "0xb95B5953FF8ee5D5d9818CdbEfE363ff2191318c";
-export const ca_onChainGM = "0xb95B5953FF8ee5D5d9818CdbEfE363ff2191318c";
+export const ca_onChainGM = "0x84A2dc4fd3EFBbAcCc2f2edfC65F1067545275c8";
 export const data_onChainGM = "0x84a3bb6b0000000000000000000000000000000000000000000000000000000000000000";
+export const gm_topic = "0x9290e8f5ba7fa69269d601e86762855088f9a24d834db4d6b3e603d7a522e56a";
 export const GAS_LIMIT = 200000;
 
 export const tokenNames = {
@@ -41,7 +42,7 @@ export function RandomAmount(min, max, decimalPlaces) {
   return (Math.random() * (max - min) + min).toFixed(decimalPlaces);
 }
 
-export function randomdelay(min = 15000, max = 30000) {
+export function randomdelay(min = 7000, max = 15000) {
   return Math.floor(Math.random() * (max - min) + min);
 }
 
@@ -89,13 +90,36 @@ export async function mintToken(wallet, tokenmint) {
     }
 
     if (attempts == 5) {
-      logError(`Gagal claim, rate limit`);
+      logError(`Gagal claim, rate limit\n`);
     } else {
       logSuccess(`Claim berhasil!\n`);
     }
 
   } catch (err) {
-    logError(`Error Claim Faucet : ${err.message || err}\n`);
+    if (err.reason && err.reason === "Wait 24 hours") {
+      logError(`Claim Masih cooldown..\n`);
+    } else {
+      logError(`Error mintToken ${err.message || err}\n`);
+    }
+  }
+}
+
+export async function onChainGM(wallet) {
+  try {
+    const fee = ethers.parseEther("0.00029");
+    logCache(`GM OnChainGM`);
+    const tx = await wallet.sendTransaction({ 
+      to: ca_onChainGM,
+      value: fee,
+      data: data_onChainGM,
+      gasLimit: GAS_LIMIT
+    });
+
+    logInfo(`GM dikirim ->> https://chainscan-galileo.0g.ai/tx/${tx.hash}`);
+    await tx.wait();
+    logSuccess(`OnChainGM berhasil!\n`);
+  } catch (error) {
+    logError(`Error onChainGM : ${error.message || error}\n`);
   }
 }
 
@@ -110,6 +134,7 @@ export async function approve(wallet, tokenAddress, spenderAddress, amountIn) {
 
     const tx = await token.approve(spenderAddress, amountIn);
     logInfo(`Tx Approve ->> https://chainscan-galileo.0g.ai/tx/${tx.hash}`);
+    await delay(randomdelay());
 
     await tx.wait();
     logSuccess(`Approve sukses!`);
