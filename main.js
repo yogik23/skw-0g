@@ -63,7 +63,7 @@ async function Warp(wallet, amountWarp) {
     await tx.wait();
     logSuccess(`Swap successful\n`);
   } catch (err) {
-    logError(`❌ Error during Swap : ${err.message || err}`);
+    logError(`Error during Swap : ${err.message || err}`);
   }
 }
 
@@ -83,7 +83,7 @@ async function Unwarp(wallet, amountUnwarp) {
     await tx.wait();
     logSuccess(`Swap successful\n`);
   } catch (err) {
-    logError(`❌ Error during Swap : ${err.message || err}`);
+    logError(`Error during Swap : ${err.message || err}`);
   }
 }
 
@@ -116,7 +116,7 @@ async function wHAUSTtoWETH(wallet, amountwHAUSTtoWETH) {
     logSuccess(`Swap Berhasil\n`);
     return tx.hash;
   } catch (err) {
-    logError(`❌ TX failed: ${err.message || err}`);
+    logError(`TX failed: ${err.message || err}`);
   }
 }
 
@@ -150,7 +150,7 @@ async function wHAUSTtoWBTC(wallet, amountwHAUSTtoWBTC) {
     logSuccess(`Swap Berhasil\n`);
     return tx.hash;
   } catch (err) {
-    logError(`❌ TX failed: ${err.message || err}`);
+    logError(`TX failed: ${err.message || err}`);
   }
 }
 
@@ -184,7 +184,7 @@ async function wHAUSTtoUSDT(wallet, amountwHAUSTtoUSDT) {
     logSuccess(`Swap Berhasil\n`);
     return tx.hash;
   } catch (err) {
-    logError(`❌ TX failed: ${err.message || err}`);
+    logError(`TX failed: ${err.message || err}`);
   }
 }
 
@@ -200,25 +200,27 @@ async function startBot() {
     logAccount(`Wallet : ${wallet.address}`);
     logAccount(`Balance : ${Balance} HAUST`);
 
-    const amountWarp = "0.2";
+await delay(randomdelay());
+
+    const amountWarp = "0.3";
     await Warp(wallet, amountWarp);
-    await delay(5000);
+    await delay(randomdelay())
 
     const amountUnwarp = "0.19";
     await Unwarp(wallet, amountUnwarp);
-    await delay(5000);
+    await delay(randomdelay())
 
-    const amountwHAUSTtoWETH = "0.01";
+    const amountwHAUSTtoWETH = randomAmount(0.01, 0.05, 2);
     await wHAUSTtoWETH(wallet, amountwHAUSTtoWETH);
-    await delay(5000);
+    await delay(randomdelay())
 
-    const amountwHAUSTtoWBTC = "0.01";
+    const amountwHAUSTtoWBTC = randomAmount(0.01, 0.05, 2);
     await wHAUSTtoWBTC(wallet, amountwHAUSTtoWBTC);
-    await delay(5000);
+    await delay(randomdelay())
 
-    const amountwHAUSTtoUSDT = "0.01";
+    const amountwHAUSTtoUSDT = randomAmount(0.01, 0.05, 2);
     await wHAUSTtoUSDT(wallet, amountwHAUSTtoUSDT);
-    await delay(5000);
+    await delay(randomdelay())
 
   }
 }
