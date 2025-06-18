@@ -89,7 +89,7 @@ async function mintAllToken(wallet) {
 async function allGM(wallet) {
   try {
     const currentBlock = await provider.getBlockNumber();
-    const fromBlock = Math.max(0, currentBlock - 10000);
+    const fromBlock = Math.max(0, currentBlock - 50000);
     const toBlock = currentBlock;
 
     const filter = {
