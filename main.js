@@ -1,13 +1,10 @@
 import { ethers } from "ethers";
 import chalk from "chalk";
-import axios from "axios";
 import cron from "node-cron";
-import dotenv from "dotenv";
 import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
-import { displayskw } from './skw/displayskw.js';
-dotenv.config();
+import { displayskw } from "./skw/displayskw.js";
 import { 
   logAccount,
   logError,
@@ -17,248 +14,212 @@ import {
   delay,
 } from "./skw/logger.js";
 
+import {
+  ca_swap,
+  ca_approve,
+  usdc_address,
+  usdt_address,
+  wHAUST_address,
+  randomAmount,
+  randomdelay
+  abi_swap,
+  approve1,
+  approve2,
+} from './skw/config.js';
+
 import { 
-  BTC_ADDRESS,
-  ETH_ADDRESS,
-  USDT_ADDRESS,
-  SWAP_ROUTER,
-  ca_onChainGM,
-  data_onChainGM,
-  gm_topic,
-  GAS_LIMIT,
-  getTokenName,
-  RandomAmount,
-  randomdelay,
-  erc20_abi,
-  swap_abi,
-  buildPath,
-  cekbalance,
-  mintToken,
-  onChainGM,
-  approve,
-  generateSwapParams,
-} from "./skw/config.js";
+  inputamount,
+  datahaustUSDC,
+  datahaustUSDT,
+  datawHAUSTtoWETH,
+  datawHAUSTtoWBTC,
+  datawHAUSTtoUSDT,
+} from "./skw/inputdata.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-const RPC = "https://evmrpc-testnet.0g.ai/";
+const RPC = "https://rpc-testnet.haust.app";
 const provider = new ethers.JsonRpcProvider(RPC);
 
-const privateKeys = fs
-  .readFileSync(path.join(__dirname, "privatekey.txt"), "utf-8")
+const privateKeys = fs.readFileSync(path.join(__dirname, "privatekey.txt"), "utf-8")
   .split("\n")
-  .map((k) => k.trim())  
-  .filter((k) => k.length > 0);
+  .map(k => k.trim())
+  .filter(k => k.length > 0);
 
-async function allbalance(wallet) {
+async function Warp(wallet, amountWarp) {
   try {
-    const getBalance = await provider.getBalance(wallet.address);
-    const Ogformatbalance = ethers.formatUnits(getBalance,18);
-    const OgBalance = parseFloat(Ogformatbalance).toFixed(5);
+    const warp_abi = ["function deposit() external payable"];
+    const contract = new ethers.Contract(wHAUST_address, warp_abi, wallet);
 
-    const btcformatbalance = await cekbalance(wallet, BTC_ADDRESS);
-    const btcBalance = parseFloat(btcformatbalance).toFixed(5);
+    logCache(`Swap ${amountWarp} HAUST ke → ${amountWarp} wHAUST`);
 
-    const ethformatbalance = await cekbalance(wallet, ETH_ADDRESS);
-    const ethBalance = parseFloat(ethformatbalance).toFixed(3);
-
-    const usdtformatbalance = await cekbalance(wallet, USDT_ADDRESS);
-    const usdtBalance = parseFloat(usdtformatbalance).toFixed(2);
-
-    logAccount(`Wallet: ${wallet.address}`);
-    logInfo(`Balance ${OgBalance} 0g`);
-    logInfo(`Balance ${btcBalance} BTC`);
-    logInfo(`Balance ${ethBalance} ETH`);
-    logInfo(`Balance ${usdtBalance} USDT\n`);
-  } catch (err) {
-    logError(`Error Cek AllBalance : ${err.message || err}\n`);
-  }
-}
-
-async function mintAllToken(wallet) {
-  await mintToken(wallet, USDT_ADDRESS);
-  await delay(randomdelay());
-
-  await mintToken(wallet, ETH_ADDRESS);
-  await delay(randomdelay());
-
-  await mintToken(wallet, BTC_ADDRESS);
-}
-
-async function allGM(wallet) {
-  try {
-    const currentBlock = await provider.getBlockNumber();
-    const fromBlock = Math.max(0, currentBlock - 50000);
-    const toBlock = currentBlock;
-
-    const filter = {
-      address: ca_onChainGM,
-      topics: [gm_topic, ethers.zeroPadValue(wallet.address, 32)],
-      fromBlock,
-      toBlock,
-    };
-  
-    const logs = await provider.getLogs(filter);
-    if (logs.length == 0) {
-      await onChainGM(wallet);
-      return true;
-    }
-
-    const lastBlock = logs[logs.length - 1].blockNumber;
-    const block = await provider.getBlock(lastBlock);
-    const now = Math.floor(Date.now() / 1000);
-    const elapsed = now - block.timestamp;
-
-    if (elapsed < 86400) {
-      const cooldownLeft = 86400 - elapsed;
-      logCache(`onChainGM Masih cooldown ${Math.floor(cooldownLeft/3600)} jam ${Math.floor((cooldownLeft%3600)/60)} menit\n`); 
-    } else {
-      await onChainGM(wallet);
-    }
-
-  } catch (error) {
-    console.error(error);
-    return null;
-  }
-}
-
-async function swapETHBTC(wallet, tokenIn, tokenOut, amount) {
-  try {
-    const contract = new ethers.Contract(SWAP_ROUTER, swap_abi, wallet);
-    const fee = 3000;
-    const amountswap = ethers.parseUnits(amount, 18);
-    const deadline = Math.floor(Date.now() / 1000) + 60;
-
-    const path = buildPath({ 
-      tokenIn: tokenIn, 
-      fee: fee, 
-      tokenOut: tokenOut 
+    const tx = await contract.deposit({
+      value: ethers.parseEther(amountWarp),
+      gasLimit: 100_000,
     });
-    
-    logAccount(`Wallet: ${wallet.address}`);
-    logCache(`Swap ${amount} ${getTokenName(tokenIn)} ke ${getTokenName(tokenOut)}`);
-    await approve(wallet, tokenIn, SWAP_ROUTER, amountswap);
 
-    const param = {
-      path: path,
-      recipient: wallet.address,
-      deadline: deadline,
-      amountIn: amountswap,
-      amountOutMinimum: 0n,
-    }
-
-    const tx = await contract.exactInput(param, { gasLimit: GAS_LIMIT });
-    logInfo(`Tx swap ->> https://chainscan-galileo.0g.ai/tx/${tx.hash}`);
+    logInfo(`Tx Dikirim https://explorer-testnet.haust.app/tx/${tx.hash}`);
     await tx.wait();
-    logSuccess(`Swap berhasil!\n`);
-    await delay(randomdelay());
+    logSuccess(`Swap successful\n`);
   } catch (err) {
-    logError(`Error during Swap : ${err.message || err}\n`);
+    logError(`❌ Error during Swap : ${err.message || err}`);
   }
 }
 
-async function swapUSDTETH(wallet) {
+async function Unwarp(wallet, amountUnwarp) {
   try {
-    const contract = new ethers.Contract(SWAP_ROUTER, swap_abi, wallet);
-    const swapParams = generateSwapParams(wallet);
-    for (const param of swapParams) {
-      const amountswap = ethers.formatUnits(param.amountIn, 18);
-      logAccount(`Wallet: ${wallet.address}`);
-      logCache(`Swap ${amountswap} ${getTokenName(param.tokenIn)} ke ${getTokenName(param.tokenOut)}`);
-      
-      await approve(wallet, param.tokenIn, SWAP_ROUTER, param.amountIn);
+    const amount = ethers.parseEther(amountUnwarp); 
+    const unwarp_abi = ["function withdraw(uint256 wad) external"];
+    const contract = new ethers.Contract(wHAUST_address, unwarp_abi, wallet);
 
-      const tx = await contract.exactInputSingle(param, { gasLimit: GAS_LIMIT });
-      logInfo(`Tx dikirim ->> https://chainscan-galileo.0g.ai/tx/${tx.hash}`);
-      await tx.wait();
-      logSuccess(`Swap berhasil!\n`);
-      await delay(randomdelay());
-    }
+    logCache(`Swap ${amountUnwarp} WHAUST ke → ${amountUnwarp} HAUST`);
+
+    const tx = await contract.withdraw(amount, {
+      gasLimit: 100_000,
+    });
+
+    logInfo(`Tx Dikirim https://explorer-testnet.haust.app/tx/${tx.hash}`);
+    await tx.wait();
+    logSuccess(`Swap successful\n`);
   } catch (err) {
-    logError(`Error during Swap : ${err.message || err}\n`);
+    logError(`❌ Error during Swap : ${err.message || err}`);
   }
 }
 
-async function allswap(wallet) {
+async function wHAUSTtoWETH(wallet, amountwHAUSTtoWETH) {
+  const iface = new ethers.Interface(abi_swap);
+  const deadline = Math.floor(Date.now() / 1000) + 600;
+  const expiration = Math.floor(Date.now() / 1000) + 3600 * 24;
+  const commands = "0x00";
+  const {amountinput } = inputamount(amountwHAUSTtoWETH);
+  const inputwHAUSTtoWETH = datawHAUSTtoWETH(amountinput);
+
+  const calldata = iface.encodeFunctionData("execute", [
+    commands,
+    [inputwHAUSTtoWETH],
+    deadline,
+  ]);
+
+  await approve1(wallet, amountwHAUSTtoWETH);
+  await approve2(wallet, wHAUST_address, ca_swap, amountwHAUSTtoWETH, 18, expiration);
+
   try {
-    await swapUSDTETH(wallet);
+    logCache(`Swap ${amountwHAUSTtoWETH} wHAUST ke WETH`);
+    const tx = await wallet.sendTransaction({
+      to: ca_swap,
+      data: calldata,
+    });
 
-    const randomethbtc = RandomAmount(0.1, 1, 1);
-    await swapETHBTC(wallet, ETH_ADDRESS, BTC_ADDRESS, randomethbtc);
-    await delay(randomdelay());
-
-    const randombtceth = RandomAmount(0.0001, 0.0007, 4);
-    await swapETHBTC(wallet, BTC_ADDRESS, ETH_ADDRESS, randombtceth);
-    await delay(randomdelay());
-
-    const randombtcusdt = RandomAmount(0.0001, 0.0007, 4);
-    await swapETHBTC(wallet, BTC_ADDRESS, USDT_ADDRESS, randombtcusdt);
+    logInfo(`Tx Dikirim https://explorer-testnet.haust.app/tx/${tx.hash}`);
+    await tx.wait();
+    logSuccess(`Swap Berhasil\n`);
+    return tx.hash;
   } catch (err) {
-    logError(`Error during Swap : ${err.message || err}\n`);
+    logError(`❌ TX failed: ${err.message || err}`);
   }
 }
 
-async function sendTG(address, txCount) {
-  if (process.env.SEND_TO_TG !== "true") {
-    return;
+async function wHAUSTtoWBTC(wallet, amountwHAUSTtoWBTC) {
+  const asw = "0.01";
+  const iface = new ethers.Interface(abi_swap);
+  const deadline = Math.floor(Date.now() / 1000) + 600;
+  const expiration = Math.floor(Date.now() / 1000) + 3600 * 24;
+  const commands = "0x00";
+  const {amountinput } = inputamount(amountwHAUSTtoWBTC);
+  const inputwHAUSTtoWBTC = datawHAUSTtoWBTC(amountinput);
+
+  const calldata = iface.encodeFunctionData("execute", [
+    commands,
+    [inputwHAUSTtoWBTC],
+    deadline,
+  ]);
+
+  await approve1(wallet, amountwHAUSTtoWBTC);
+  await approve2(wallet, wHAUST_address, ca_swap, amountwHAUSTtoWBTC, 18, expiration);
+
+  try {
+    logCache(`Swap ${amountwHAUSTtoWBTC} wHAUST ke WBTC`);
+    const tx = await wallet.sendTransaction({
+      to: ca_swap,
+      data: calldata,
+    });
+
+    logInfo(`Tx Dikirim https://explorer-testnet.haust.app/tx/${tx.hash}`);
+    await tx.wait();
+    logSuccess(`Swap Berhasil\n`);
+    return tx.hash;
+  } catch (err) {
+    logError(`❌ TX failed: ${err.message || err}`);
   }
+}
 
-  const retries = 5;
-  const date = new Date().toISOString().split("T")[0];
-  const escape = (text) => text.toString().replace(/([_*[\]()~`>#+-=|{}.!])/g, "\\$1");
+async function wHAUSTtoUSDT(wallet, amountwHAUSTtoUSDT) {
+  const iface = new ethers.Interface(abi_swap);
+  const deadline = Math.floor(Date.now() / 1000) + 600;
+  const expiration = Math.floor(Date.now() / 1000) + 3600 * 24;
+  const commands = "0x00";
+  const {amountinput } = inputamount(amountwHAUSTtoUSDT);
+  const inputwHAUSTtoUSDT = datawHAUSTtoUSDT(amountinput);
 
-  const message = `🌐 *0g Testnet*\n📅 *${escape(date)}*\n👛 *${escape(address)}*\n🔣 *Total TX: ${escape(txCount)}*`;
+  const calldata = iface.encodeFunctionData("execute", [
+    commands,
+    [inputwHAUSTtoUSDT],
+    deadline,
+  ]);
 
-  for (let attempt = 1; attempt <= retries; attempt++) {
-    try {
-      const response = await axios.post(
-        `https://api.telegram.org/bot${process.env.BOT_TOKEN}/sendMessage`,
-        {
-          chat_id: process.env.CHAT_ID,
-          text: message,
-          parse_mode: "MarkdownV2",
-        }
-      );
-      logSuccess(`Message sent to Telegram successfully!\n`);
-      return response.data;
-    } catch (error) {
-      logError(`Error sendTG : ${error.message || error}\n`);
-      if (attempt < retries) {
-        await delay(3000); 
-      } else {
-        return null;
-      }
-    }
+  logCache(`Swap ${amountwHAUSTtoUSDT} wHAUST ke USDT`);
+
+  await approve1(wallet, amountwHAUSTtoUSDT);
+  await approve2(wallet, wHAUST_address, ca_swap, amountwHAUSTtoUSDT, 18, expiration);
+
+  try {
+    const tx = await wallet.sendTransaction({
+      to: ca_swap,
+      data: calldata,
+    });
+
+    logInfo(`Tx Dikirim https://explorer-testnet.haust.app/tx/${tx.hash}`);
+    await tx.wait();
+    logSuccess(`Swap Berhasil\n`);
+    return tx.hash;
+  } catch (err) {
+    logError(`❌ TX failed: ${err.message || err}`);
   }
 }
 
 async function startBot() {
-  try {
-    displayskw();
-    await delay(6000);
-    console.clear();
-    for (const pk of privateKeys) {
-      const wallet = new ethers.Wallet(pk, provider);
-      await allbalance(wallet);
+  displayskw();
+  await delay(6000);
+  console.clear();
+  for (const pk of privateKeys) {
+    const wallet = new ethers.Wallet(pk, provider);
+    const getBalance = await provider.getBalance(wallet.address);
+    const Balance = ethers.formatUnits(getBalance,18);
+    const formatbalance = parseFloat(Balance).toFixed(3);
+    logAccount(`Wallet : ${wallet.address}`);
+    logAccount(`Balance : ${Balance} HAUST`);
 
-      await allGM(wallet);
-      await delay(randomdelay());
+    const amountWarp = "0.2";
+    await Warp(wallet, amountWarp);
+    await delay(5000);
 
-      await mintAllToken(wallet);
-      await delay(randomdelay());
+    const amountUnwarp = "0.19";
+    await Unwarp(wallet, amountUnwarp);
+    await delay(5000);
 
-      await allswap(wallet);
-      await delay(randomdelay());
+    const amountwHAUSTtoWETH = "0.01";
+    await wHAUSTtoWETH(wallet, amountwHAUSTtoWETH);
+    await delay(5000);
 
-      const txCount = await provider.getTransactionCount(wallet.address);
-      logAccount(`Totaltx ${wallet.address}`);
-      logAccount(`-->>>: ${txCount}`);
-      await sendTG(wallet.address, txCount);
-      await delay(randomdelay());
-    }
-  } catch (err) {
-    logError(`Error : ${err.message || err}\n`);
+    const amountwHAUSTtoWBTC = "0.01";
+    await wHAUSTtoWBTC(wallet, amountwHAUSTtoWBTC);
+    await delay(5000);
+
+    const amountwHAUSTtoUSDT = "0.01";
+    await wHAUSTtoUSDT(wallet, amountwHAUSTtoUSDT);
+    await delay(5000);
+
   }
 }
 
